@@ -1,0 +1,6 @@
+{
+  "name": "Raoula_js",
+  "description": "Application confidentielle de calcul et suivi des cycles menstruels, périodes de fertilité et prévisions des règles par SAMUEL SAMVICdev.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

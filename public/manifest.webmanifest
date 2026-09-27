@@ -1,0 +1,32 @@
+{
+  "id": "/",
+  "name": "Raoula_js · Suivi du Cycle & Fertilité",
+  "short_name": "Raoula_js",
+  "description": "Application confidentielle de calcul et suivi des cycles menstruels, périodes de fertilité et prévisions des règles par SAMUEL SAMVICdev.",
+  "theme_color": "#fff1f2",
+  "background_color": "#fff1f2",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

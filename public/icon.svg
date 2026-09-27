@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff1f2" />
+      <stop offset="50%" stop-color="#ffe4e6" />
+      <stop offset="100%" stop-color="#fecdd3" />
+    </linearGradient>
+    <linearGradient id="dropGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="50%" stop-color="#e11d48" />
+      <stop offset="100%" stop-color="#be123c" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#fda4af" stop-opacity="0" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#be123c" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded squircle with padding for maskable safety -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+
+  <!-- Outer subtle circular ring representing cycle -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#f43f5e" stroke-width="8" stroke-dasharray="16 12" stroke-opacity="0.35" />
+
+  <!-- Center Droplet / Petal Icon -->
+  <g filter="url(#shadow)">
+    <!-- Droplet Body -->
+    <path d="M 256 120 C 256 120 160 250 160 320 C 160 373 203 416 256 416 C 309 416 352 373 352 320 C 352 250 256 120 256 120 Z" fill="url(#dropGrad)" />
+    
+    <!-- Inner soft highlight -->
+    <path d="M 256 150 C 256 150 185 260 185 320 C 185 345 195 370 215 385 C 200 370 195 340 205 315 C 218 280 256 190 256 150 Z" fill="#ffffff" fill-opacity="0.35" />
+  </g>
+
+  <!-- Glowing core star / fertility symbol -->
+  <circle cx="256" cy="326" r="24" fill="#ffffff" fill-opacity="0.9" />
+  <circle cx="256" cy="326" r="12" fill="#e11d48" />
+</svg>

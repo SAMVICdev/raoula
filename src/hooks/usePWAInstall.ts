@@ -9,6 +9,7 @@ export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isIOSSafari, setIsIOSSafari] = useState(false);
 
   useEffect(() => {
     // Check if running in standalone mode (already installed as PWA or native web app)
@@ -17,10 +18,13 @@ export function usePWAInstall() {
       (window.navigator as unknown as { standalone?: boolean }).standalone === true;
     setIsInstalled(isStandalone);
 
-    // Detect iOS devices
+    // Detect iOS devices and the browser used
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIOSDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIOSDevice);
+    // Safari seul : UA contient "safari" sans "crios" (Chrome), "edgios" (Edge), "fxios" (Firefox)
+    const isThirdPartyIOSBrowser = /crios|edgios|fxios|opt\/|duckduckgo/.test(userAgent);
+    setIsIOSSafari(isIOSDevice && /safari/.test(userAgent) && !isThirdPartyIOSBrowser);
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -57,6 +61,7 @@ export function usePWAInstall() {
     isInstallable: !!deferredPrompt,
     isInstalled,
     isIOS,
+    isIOSSafari,
     install,
   };
 }

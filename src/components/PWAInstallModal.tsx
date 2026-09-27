@@ -8,7 +8,9 @@ import {
   CheckCircle2, 
   Zap, 
   ShieldCheck, 
-  Sparkles 
+  Sparkles,
+  ExternalLink,
+  Compass
 } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
@@ -18,7 +20,7 @@ interface PWAInstallModalProps {
 }
 
 export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClose }) => {
-  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+  const { isInstallable, isInstalled, isIOS, isIOSSafari, install } = usePWAInstall();
 
   if (!isOpen) return null;
 
@@ -106,6 +108,25 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
                 <span>Installer maintenant (Gratuit)</span>
               </button>
             </div>
+          ) : isIOS && !isIOSSafari ? (
+            /* Mode 3bis: iOS mais PAS Safari (Chrome/Firefox/Edge sur iPhone) — installation impossible ici */
+            <div className="space-y-3 bg-amber-50 p-4 rounded-2xl border border-amber-200">
+              <div className="font-bold text-stone-900 text-xs flex items-center gap-1.5">
+                <Compass className="w-4 h-4 text-amber-600" />
+                <span>Ouvre l'app dans Safari pour l'installer</span>
+              </div>
+              <p className="text-[11px] text-stone-700 leading-relaxed">
+                Tu utilises un autre navigateur sur iPhone : Apple autorise uniquement <strong>Safari</strong> à installer des applications.
+              </p>
+              <ol className="space-y-2 text-[11px] text-stone-700 list-decimal list-inside leading-relaxed">
+                <li>Copie l'adresse de cette page (ou envoie-toi le lien par message).</li>
+                <li>Ouvre <strong>Safari</strong> (la boussole 🧭) et colle l'adresse.</li>
+                <li>Reviens ici : le bouton d'installation t'attendra.</li>
+              </ol>
+              <div className="text-[10px] text-stone-500 italic pt-1">
+                Une fois dans Safari, appuie sur Partager → « Sur l'écran d'accueil ».
+              </div>
+            </div>
           ) : isIOS ? (
             /* Mode 3: iPhone / iPad (iOS Safari) instructions */
             <div className="space-y-3 bg-stone-50 p-4 rounded-2xl border border-stone-200">
@@ -124,9 +145,6 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
                   Appuyez sur <strong>« Ajouter »</strong> en haut à droite.
                 </li>
               </ol>
-              <div className="text-[10px] text-stone-500 italic pt-1">
-                L'icône Raoula_js s'ajoutera à côté de vos autres applications et s'ouvrira en plein écran sans barre d'adresse.
-              </div>
             </div>
           ) : (
             /* Mode 4: Desktop browser or Android fallback */

@@ -14,6 +14,7 @@ import { AddCycleModal } from './components/AddCycleModal';
 import { PWAInstallModal } from './components/PWAInstallModal';
 import { OnboardingView } from './components/OnboardingView';
 import { TutorialView } from './components/TutorialView';
+import { usePWAInstall } from './hooks/usePWAInstall';
 import { LockScreen } from './components/LockScreen';
 import { InsightsView } from './components/InsightsView';
 import { Cycle, DailyLog, UserSettings, CalculatedCycleStatus, CycleStatistics } from './types';
@@ -58,6 +59,31 @@ export default function App() {
   const [selectedDateForLog, setSelectedDateForLog] = useState<string>(formatDate(new Date()));
   const [isAddCycleOpen, setIsAddCycleOpen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+
+  // Installation automatique : fenêtre proposée au premier chargement si possible,
+  // sauf si l’utilisatrice l’a déjà fermée (souvenir local).
+  const { isInstallable } = usePWAInstall();
+  useEffect(() => {
+    if (isLoading || !isInstallable) return;
+    let dismissed = false;
+    try {
+      dismissed = localStorage.getItem('raoula_install_dismissed') === '1';
+    } catch {
+      // ignore
+    }
+    if (dismissed) return;
+    const t = window.setTimeout(() => setIsInstallModalOpen(true), 1800);
+    return () => window.clearTimeout(t);
+  }, [isLoading, isInstallable]);
+
+  const closeInstallModal = () => {
+    setIsInstallModalOpen(false);
+    try {
+      localStorage.setItem('raoula_install_dismissed', '1');
+    } catch {
+      // ignore
+    }
+  };
 
   // Verrouillage PIN (mode discret) : vérifié après chargement des données
   const [isUnlocked, setIsUnlocked] = useState(isSessionUnlocked());
@@ -412,7 +438,7 @@ export default function App() {
 
       <PWAInstallModal
         isOpen={isInstallModalOpen}
-        onClose={() => setIsInstallModalOpen(false)}
+        onClose={closeInstallModal}
       />
     </div>
   );

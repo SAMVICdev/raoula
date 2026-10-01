@@ -2,186 +2,60 @@ import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Gamepad2,
-  Brain,
-  Scale,
-  Grid3x3,
   ArrowLeft,
   Trophy,
   Check,
   X,
   RotateCcw,
   Sparkles,
-  ChevronRight,
   Info,
+  Lock,
+  Star,
+  Heart,
+  Scale,
+  Grid3x3,
+  Brain,
+  ListFilter,
+  Crown,
+  Flame,
+  Zap,
 } from 'lucide-react';
 import { staggerContainer, fadeUpItem, hapticLight, hapticSuccess } from '../utils/animation';
+import {
+  WORLDS,
+  TOTAL_LEVELS,
+  QUIZ_PHASES,
+  QUIZ_BODY,
+  QUIZ_FERTILITY,
+  QUIZ_MYTHS,
+  QUIZ_BOSS,
+  TRUE_FALSE_SETS,
+  SYMPTOM_SORT_SETS,
+  MEMORY_DECKS,
+  loadProgress,
+  saveProgress,
+  levelKey,
+  isLevelUnlocked,
+  computeStars,
+  totalStars,
+  type AdventureProgress,
+  type QuizQuestion,
+  type TrueFalseItem,
+  type SymptomSortItem,
+  type MemoryPair,
+  type World,
+  type WorldLevel,
+} from '../games/adventureData';
 
-/* ═══════════════════════════════════════════════════════════════
-   Données des jeux — contenu éducatif, bienveillant, non médical
-   ═══════════════════════════════════════════════════════════════ */
+/* ═════════════════════ Sélection de questions selon le monde ═════════════════════ */
 
-interface QuizQuestion {
-  question: string;
-  choices: string[];
-  answerIndex: number;
-  explanation: string;
-}
-
-const QUIZ: QuizQuestion[] = [
-  {
-    question: 'Combien de jours dure en moyenne un cycle menstruel ?',
-    choices: ['14 jours', '28 jours', '45 jours'],
-    answerIndex: 1,
-    explanation:
-      "La moyenne est de 28 jours, mais un cycle normal peut aller de 21 à 35 jours. Chaque corps a son rythme !",
-  },
-  {
-    question: 'Quelle phase suit directement les règles ?',
-    choices: ['La phase lutéale', 'La phase folliculaire', "La phase d'ovulation"],
-    answerIndex: 1,
-    explanation:
-      "Après les règles, la phase folliculaire commence : les hormones préparent un ovocyte dans les ovaires.",
-  },
-  {
-    question: 'Combien de temps un spermatozoïde peut-il survivre dans le corps ?',
-    choices: ['Quelques heures', 'Environ 24 heures', "Jusqu'à 5 jours"],
-    answerIndex: 2,
-    explanation:
-      "Jusqu'à 5 jours dans la glaire fertile ! C'est pourquoi la fenêtre fertile commence avant l'ovulation.",
-  },
-  {
-    question: 'Quelle température indique souvent qu\u2019une ovulation a eu lieu ?',
-    choices: [
-      'Une chute de 1 °C',
-      'Une hausse de 0,3 à 0,5 °C qui persiste',
-      'Aucun changement'],
-    answerIndex: 1,
-    explanation:
-      "La progestérone post-ovulatoire fait monter la température de 0,3 à 0,5 °C. Ce décalage thermique confirme l'ovulation.",
-  },
-  {
-    question: 'Le stress peut-il décaler tes règles ?',
-    choices: ['Non, jamais', 'Oui, parfois de plusieurs jours', 'Seulement si on prend des médicaments'],
-    answerIndex: 1,
-    explanation:
-      "Oui ! L'axe hormonal est sensible au stress, au sommeil et aux voyages. Un décalage de quelques jours est fréquent.",
-  },
-  {
-    question: 'Quelle glaire annonce la fertilité maximale ?',
-    choices: ['Sèche et collante', 'Crémeuse blanche', 'Filante comme du blanc d’œuf'],
-    answerIndex: 2,
-    explanation:
-      "La glaire transparente et élastique « blanc d'œuf » est le meilleur signal de fertilité maximale.",
-  },
-  {
-    question: 'Une douleur qui empêche de vivre sa journée pendant les règles est :',
-    choices: [
-      'Normale, il faut juste supporter',
-      'À signaler à un professionnel de santé',
-      'Une excuse pour sécher les cours'],
-    answerIndex: 1,
-    explanation:
-      "Une douleur invalidante n'est PAS normale. Cela peut évoquer de l'endométriose : il faut en parler à un professionnel.",
-  },
-  {
-    question: 'Le sang des règles peut être de couleur…',
-    choices: ['Rouge vif uniquement', 'Rouge, brun ou rosé — c’est normal', 'Noir (grave !)'],
-    answerIndex: 1,
-    explanation:
-      "Rouge vif, brun ou rosé : tout est normal. Le brun est du sang oxydé qui a mis du temps à s'évacuer.",
-  },
-];
-
-interface TrueFalse {
-  statement: string;
-  answer: boolean;
-  explanation: string;
-}
-
-const TRUE_FALSE: TrueFalse[] = [
-  {
-    statement: 'On peut tomber enceinte pendant les règles.',
-    answer: true,
-    explanation:
-      "C'est rare mais possible, surtout avec des cycles courts ou une ovulation précoce : les spermatozoïdes survivent jusqu'à 5 jours.",
-  },
-  {
-    statement: 'Toutes les femmes ont des cycles de exactement 28 jours.',
-    answer: false,
-    explanation:
-      "Faux ! De 21 à 35 jours, tout est normal. Même d'un mois à l'autre, 2 à 4 jours de variation sont habituels.",
-  },
-  {
-    statement: "L'ovulation a toujours lieu le 14e jour.",
-    answer: false,
-    explanation:
-      "Faux ! Le 14e jour est une moyenne sur un cycle de 28 jours. Pour un cycle de 32 jours, l'ovulation tombe souvent vers le 18e jour.",
-  },
-  {
-    statement: "La chute de cheveux ou l'acné du cycle peut être liée aux hormones.",
-    answer: true,
-    explanation:
-      "Vrai ! Les fluctuations d'œstrogènes et de progestérone influencent peau et cheveux au fil du cycle.",
-  },
-  {
-    statement: 'Un tampon peut se perdre à l’intérieur du corps.',
-    answer: false,
-    explanation:
-      "Faux : anatomiquement impossible — le col de l'utérus bloque le passage. Mais respecte la durée maximale d'utilisation (4 à 8 h).",
-  },
-  {
-    statement: 'Faire du sport pendant les règles est déconseillé.',
-    answer: false,
-    explanation:
-      "Faux ! Le sport doux (marche, yoga, natation) libère des endorphines qui soulagent souvent les crampes.",
-  },
-  {
-    statement: "Les règles douloureuses au point de vomir doivent être évaluées par un médecin.",
-    answer: true,
-    explanation:
-      "Vrai ! Cela peut signaler de l'endométriose ou un autre problème traitable. N'attend pas pour en parler.",
-  },
-  {
-    statement: 'La pilule contraceptive rend les cycles réguliers Naturellement.',
-    answer: false,
-    explanation:
-      "Faux : sur pilule, les « règles » sont des saignements de privation provoqués par la pause. Le cycle naturel est mis en pause.",
-  },
-];
-
-const MEMORY_PAIRS = [
-  { emoji: '🌸', label: 'Phase folliculaire' },
-  { emoji: '❤️', label: 'Prends soin de toi' },
-  { emoji: '🌊', label: 'Fenêtre fertile' },
-  { emoji: '🔥', label: 'Chaleur = crampes soulagées' },
-  { emoji: '😴', label: 'Le repos est vital' },
-  { emoji: '🤗', label: 'Humeur changeante = normal' },
-] as const;
-
-/* ═══════════════════════════════════════════════════════════════
-   Utilitaires score local
-   ═══════════════════════════════════════════════════════════════ */
-
-const SCORE_KEY = 'raoula_games_scores';
-
-function loadScores(): Record<string, number> {
-  try {
-    const raw = localStorage.getItem(SCORE_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, number>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveScore(game: string, value: number): void {
-  try {
-    const scores = loadScores();
-    if (!scores[game] || value > scores[game]) {
-      scores[game] = value;
-      localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
-    }
-  } catch {
-    // ignore
+function quizBankForWorld(world: World): QuizQuestion[] {
+  switch (world.id) {
+    case 1: return QUIZ_PHASES;
+    case 2: return QUIZ_BODY;
+    case 3: return QUIZ_FERTILITY;
+    case 4: return QUIZ_MYTHS;
+    default: return QUIZ_BOSS;
   }
 }
 
@@ -194,52 +68,45 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Vue principale
-   ═══════════════════════════════════════════════════════════════ */
+/* ═════════════════════ Vue principale ═════════════════════ */
 
-type GameId = 'quiz' | 'truefalse' | 'memory' | null;
+type Route =
+  | { view: 'map' }
+  | { view: 'world'; world: World }
+  | { view: 'play'; world: World; levelIndex: number };
 
 export const GamesView: React.FC = () => {
-  const [game, setGame] = useState<GameId>(null);
-  const [scores, setScores] = useState<Record<string, number>>(() => loadScores());
+  const [route, setRoute] = useState<Route>({ view: 'map' });
+  const [progress, setProgress] = useState<AdventureProgress>(() => loadProgress());
 
-  const registerScore = (gameId: string, value: number) => {
-    saveScore(gameId, value);
-    setScores(loadScores());
+  const completeLevel = (
+    worldId: number,
+    levelIndex: number,
+    stars: number,
+    score: number,
+    accuracy: number
+  ) => {
+    setProgress((prev) => {
+      const key = levelKey(worldId, levelIndex);
+      const existing = prev.levels[key];
+      const newLevelProgress = {
+        stars: Math.max(existing?.stars || 0, stars),
+        bestScore: Math.max(existing?.bestScore || 0, score),
+        bestAccuracy: Math.max(existing?.bestAccuracy || 0, accuracy),
+        completedAt: new Date().toISOString(),
+      };
+      const next: AdventureProgress = {
+        levels: { ...prev.levels, [key]: newLevelProgress },
+        xp: prev.xp + stars * 30 + score * 5,
+      };
+      saveProgress(next);
+      return next;
+    });
   };
 
-  const backToHub = () => setGame(null);
-
-  const GAMES = [
-    {
-      id: 'quiz' as const,
-      title: 'Quiz « Mon cycle & moi »',
-      desc: '8 questions pour devenir experte de ton corps',
-      icon: <Brain className="w-6 h-6" />,
-      gradient: 'from-rose-500 to-pink-500',
-      scoreLabel: 'Meilleur score',
-      score: scores.quiz != null ? `${scores.quiz}/8` : null,
-    },
-    {
-      id: 'truefalse' as const,
-      title: 'Vrai ou Faux',
-      desc: 'Débusque les idées reçues sur les règles',
-      icon: <Scale className="w-6 h-6" />,
-      gradient: 'from-violet-500 to-purple-500',
-      scoreLabel: 'Meilleure série',
-      score: scores.truefalse != null ? `${scores.truefalse}/8` : null,
-    },
-    {
-      id: 'memory' as const,
-      title: 'Mémoire des émotions',
-      desc: 'Retrouve les paires et leurs petits messages',
-      icon: <Grid3x3 className="w-6 h-6" />,
-      gradient: 'from-indigo-500 to-violet-500',
-      scoreLabel: 'Meilleur score (moins de coups)',
-      score: scores.memory != null ? `${scores.memory} coups` : null,
-    },
-  ];
+  const stars = totalStars(progress);
+  const completedLevels = Object.keys(progress.levels).length;
+  const adventureDone = completedLevels >= TOTAL_LEVELS;
 
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-5">
@@ -250,115 +117,193 @@ export const GamesView: React.FC = () => {
       >
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10" aria-hidden="true" />
         <div className="absolute -bottom-14 -left-6 w-48 h-48 rounded-full bg-white/5" aria-hidden="true" />
-        <div className="relative flex items-start gap-4">
-          <motion.div
-            animate={{ rotate: [0, -8, 8, 0] }}
-            transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-            className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center text-white shrink-0 border border-white/20"
-          >
-            <Gamepad2 className="w-6 h-6" />
-          </motion.div>
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-widest text-purple-100/90 block">
-              Espace Jeux
-            </span>
-            <h2 className="text-xl sm:text-2xl font-bold text-white mt-0.5">
-              Apprends en t'amusant 🎮
-            </h2>
-            <p className="text-xs sm:text-sm text-purple-50/90 mt-1.5 leading-relaxed max-w-xl">
-              Des mini-jeux pour connaître ton corps, casser les idées reçues et détendre l'esprit.
-              100 % hors-ligne, aucune donnée enregistrée en ligne.
-            </p>
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <motion.div
+              animate={{ rotate: [0, -8, 8, 0] }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+              className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center text-white shrink-0 border border-white/20"
+            >
+              <Gamepad2 className="w-6 h-6" />
+            </motion.div>
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-purple-100/90 block">
+                Aventure
+              </span>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mt-0.5">
+                {adventureDone ? 'Aventure terminée, championne ! 👑' : 'Le Cycle & Moi'}
+              </h2>
+              <p className="text-xs sm:text-sm text-purple-50/90 mt-1 leading-relaxed max-w-xl">
+                {adventureDone
+                  ? 'Tu as vaincu le Grand Cycle. Rejoue pour améliorer tes étoiles !'
+                  : '5 mondes, 20 niveaux et un boss final pour devenir experte de ton corps.'}
+              </p>
+            </div>
           </div>
+          <div className="flex items-center gap-3 text-white shrink-0">
+            <div className="text-center">
+              <div className="flex items-center gap-1 justify-center text-amber-300 font-black text-lg">
+                <Star className="w-4 h-4 fill-current" />
+                {stars}
+                <span className="text-white/60 font-medium text-xs">/{TOTAL_LEVELS * 3}</span>
+              </div>
+              <div className="text-[10px] text-white/70">étoiles</div>
+            </div>
+            <div className="w-px h-8 bg-white/20" />
+            <div className="text-center">
+              <div className="flex items-center gap-1 justify-center font-black text-lg">
+                <Zap className="w-4 h-4 fill-current text-yellow-300" />
+                {progress.xp}
+              </div>
+              <div className="text-[10px] text-white/70">XP</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Barre de progression globale */}
+        <div className="relative mt-4">
+          <div className="h-2 rounded-full bg-white/20 overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-amber-300 to-yellow-400"
+              initial={{ width: 0 }}
+              animate={{ width: `${(completedLevels / TOTAL_LEVELS) * 100}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+            />
+          </div>
+          <p className="text-[10px] text-white/70 mt-1 text-right">
+            {completedLevels}/{TOTAL_LEVELS} niveaux terminés
+          </p>
         </div>
       </motion.div>
 
-      {/* Contenu : hub ou jeu actif */}
+      {/* Contenu selon la route */}
       <AnimatePresence mode="wait">
-        {game === null && (
+        {route.view === 'map' && (
           <motion.div
-            key="hub"
+            key="map"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+            className="space-y-4"
           >
-            {GAMES.map((g) => (
-              <motion.button
-                key={g.id}
-                onClick={() => {
-                  hapticLight();
-                  setGame(g.id);
-                }}
-                whileHover={{ y: -4 }}
-                whileTap={{ scale: 0.97 }}
-                className="relative overflow-hidden bg-white p-5 rounded-2xl border border-stone-200 shadow-xs text-left cursor-pointer group"
-              >
-                <div
-                  className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${g.gradient} text-white flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform`}
-                >
-                  {g.icon}
-                </div>
-                <h3 className="text-sm font-bold text-stone-900 leading-tight">{g.title}</h3>
-                <p className="text-[11px] text-stone-500 mt-1 leading-snug">{g.desc}</p>
-                {g.score && (
-                  <div className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
-                    <Trophy className="w-3 h-3" />
-                    {g.scoreLabel} : {g.score}
-                  </div>
-                )}
-                <ChevronRight className="absolute top-4 right-4 w-4 h-4 text-stone-300 group-hover:text-rose-500 group-hover:translate-x-0.5 transition-all" />
-              </motion.button>
-            ))}
+            {/* Parcours des mondes */}
+            <div className="relative">
+              {/* Ligne de connexion verticale */}
+              <div className="absolute left-[27px] top-6 bottom-6 w-0.5 bg-stone-200 hidden sm:block" aria-hidden="true" />
+              <div className="space-y-3">
+                {WORLDS.map((world, wIdx) => {
+                  const worldDone = world.levels.every((_, li) => progress.levels[levelKey(world.id, li)]);
+                  const worldStars = world.levels.reduce(
+                    (acc, _, li) => acc + (progress.levels[levelKey(world.id, li)]?.stars || 0),
+                    0
+                  );
+                  const worldUnlocked = wIdx === 0 || !!progress.levels[levelKey(WORLDS[wIdx - 1].id, 0)];
+                  return (
+                    <motion.button
+                      key={world.id}
+                      onClick={() => {
+                        if (!worldUnlocked) return;
+                        hapticLight();
+                        setRoute({ view: 'world', world });
+                      }}
+                      whileHover={worldUnlocked ? { y: -2 } : undefined}
+                      whileTap={worldUnlocked ? { scale: 0.99 } : undefined}
+                      className={`relative w-full text-left p-4 sm:p-5 rounded-2xl border shadow-xs flex items-center gap-4 cursor-pointer transition-colors ${
+                        worldUnlocked
+                          ? 'bg-white border-stone-200 hover:shadow-sm'
+                          : 'bg-stone-50 border-stone-100 opacity-70'
+                      }`}
+                    >
+                      <div
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-sm ${
+                          worldUnlocked
+                            ? `bg-gradient-to-br ${world.gradient} text-white`
+                            : 'bg-stone-200 text-stone-400'
+                        }`}
+                      >
+                        {worldUnlocked ? world.emoji : <Lock className="w-5 h-5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className={`text-sm sm:text-base font-bold ${worldUnlocked ? 'text-stone-900' : 'text-stone-400'}`}>
+                            Monde {world.id} · {world.title}
+                          </h3>
+                          {worldDone && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${world.softBg} ${world.accentText}`}>
+                              ✓ Terminé
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-stone-500 mt-0.5">
+                          {worldUnlocked ? world.subtitle : `Termine le monde ${world.id - 1} pour débloquer`}
+                        </p>
+                        {worldUnlocked && (
+                          <div className="flex items-center gap-1 mt-1.5">
+                            {Array.from({ length: world.levels.length * 3 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3 h-3 ${
+                                  i < worldStars
+                                    ? 'fill-amber-400 text-amber-400'
+                                    : 'fill-stone-100 text-stone-200'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <Sparkles className={`w-4 h-4 shrink-0 ${worldUnlocked ? world.accentText : 'text-stone-300'}`} />
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
 
-            {/* Note pédagogique */}
-            <motion.div
-              variants={fadeUpItem}
-              className="sm:col-span-3 p-3.5 bg-stone-50 rounded-xl border border-stone-100 text-[11px] text-stone-500 flex items-start gap-2"
-            >
+            <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-100 text-[11px] text-stone-500 flex items-start gap-2">
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
-                Les scores sont gardés uniquement sur ton appareil. Ces jeux donnent des repères
-                généraux : ce n'est pas un avis médical.
+                Termine les niveaux pour gagner des étoiles ⭐ et de l'XP ⚡. Rejoue un niveau terminé pour
+                améliorer ta note. Ta progression reste sur ton appareil. Ce n'est pas un avis médical.
               </span>
-            </motion.div>
+            </div>
           </motion.div>
         )}
 
-        {game === 'quiz' && (
+        {route.view === 'world' && (
           <motion.div
-            key="quiz"
+            key={`world-${route.world.id}`}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25 }}
           >
-            <QuizGame onScore={(v) => registerScore('quiz', v)} onExit={backToHub} />
+            <WorldMap
+              world={route.world}
+              progress={progress}
+              onBack={() => setRoute({ view: 'map' })}
+              onPlay={(levelIndex) => setRoute({ view: 'play', world: route.world, levelIndex })}
+            />
           </motion.div>
         )}
 
-        {game === 'truefalse' && (
+        {route.view === 'play' && (
           <motion.div
-            key="truefalse"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
+            key={`play-${route.world.id}-${route.levelIndex}`}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.25 }}
           >
-            <TrueFalseGame onScore={(v) => registerScore('truefalse', v)} onExit={backToHub} />
-          </motion.div>
-        )}
-
-        {game === 'memory' && (
-          <motion.div
-            key="memory"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.25 }}
-          >
-            <MemoryGame onScore={(v) => registerScore('memory', v)} onExit={backToHub} />
+            <PlayLevel
+              world={route.world}
+              levelIndex={route.levelIndex}
+              progress={progress}
+              onBack={() => setRoute({ view: 'world', world: route.world })}
+              onComplete={(stars, score, accuracy) =>
+                completeLevel(route.world.id, route.levelIndex, stars, score, accuracy)
+              }
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -366,108 +311,466 @@ export const GamesView: React.FC = () => {
   );
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   JEU 1 : QUIZ
-   ═══════════════════════════════════════════════════════════════ */
+/* ═════════════════════ Carte d'un monde (liste des niveaux) ═════════════════════ */
 
-const QuizGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }> = ({ onScore, onExit }) => {
-  const questions = useMemo(() => shuffle(QUIZ), []);
+const WorldMap: React.FC<{
+  world: World;
+  progress: AdventureProgress;
+  onBack: () => void;
+  onPlay: (levelIndex: number) => void;
+}> = ({ world, progress, onBack, onPlay }) => {
+  return (
+    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-stone-200 shadow-xs">
+      <button
+        onClick={onBack}
+        className="inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-stone-800 transition-colors cursor-pointer mb-4"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Carte de l'aventure
+      </button>
+
+      <div className={`flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r ${world.gradient} text-white mb-5 shadow-sm`}>
+        <span className="text-3xl">{world.emoji}</span>
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/80 block">
+            Monde {world.id}
+          </span>
+          <h3 className="text-lg font-black">{world.title}</h3>
+          <p className="text-xs text-white/85">{world.subtitle}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2.5">
+        {world.levels.map((level, li) => {
+          const unlocked = isLevelUnlocked(progress, world.id, li);
+          const lp = progress.levels[levelKey(world.id, li)];
+          const gameIcon =
+            level.game === 'quiz' ? <Brain className="w-4 h-4" />
+            : level.game === 'truefalse' ? <Scale className="w-4 h-4" />
+            : level.game === 'memory' ? <Grid3x3 className="w-4 h-4" />
+            : level.game === 'sort' ? <ListFilter className="w-4 h-4" />
+            : <Crown className="w-4 h-4" />;
+          return (
+            <motion.button
+              key={li}
+              onClick={() => {
+                if (!unlocked) {
+                  hapticLight();
+                  return;
+                }
+                hapticLight();
+                onPlay(li);
+              }}
+              whileHover={unlocked ? { x: 3 } : undefined}
+              whileTap={unlocked ? { scale: 0.98 } : undefined}
+              className={`w-full text-left p-3.5 rounded-xl border flex items-center gap-3 cursor-pointer transition-colors ${
+                unlocked
+                  ? lp
+                    ? `${world.softBg} border border-stone-200`
+                    : 'bg-white border-stone-200 hover:border-stone-300'
+                  : 'bg-stone-50 border-stone-100 opacity-60'
+              }`}
+            >
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  unlocked
+                    ? lp
+                      ? `bg-gradient-to-br ${world.gradient} text-white`
+                      : `${world.softBg} ${world.accentText}`
+                    : 'bg-stone-200 text-stone-400'
+                }`}
+              >
+                {unlocked ? gameIcon : <Lock className="w-4 h-4" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className={`text-sm font-bold ${unlocked ? 'text-stone-900' : 'text-stone-400'}`}>
+                    Niveau {li + 1} · {level.title}
+                  </span>
+                  {level.game === 'boss' && (
+                    <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                      <Crown className="w-3 h-3" /> BOSS
+                    </span>
+                  )}
+                </div>
+                {!unlocked && (
+                  <span className="text-[11px] text-stone-400">Termine le niveau précédent</span>
+                )}
+                {lp && (
+                  <div className="flex items-center gap-0.5 mt-0.5">
+                    {[1, 2, 3].map((s) => (
+                      <Star
+                        key={s}
+                        className={`w-3 h-3 ${s <= lp.stars ? 'fill-amber-400 text-amber-400' : 'fill-stone-100 text-stone-200'}`}
+                      />
+                    ))}
+                    <span className="text-[10px] text-stone-400 ml-1">
+                      Rejouer pour améliorer
+                    </span>
+                  </div>
+                )}
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/* ═════════════════════ Gestion d'un niveau en cours ═════════════════════ */
+
+const PlayLevel: React.FC<{
+  world: World;
+  levelIndex: number;
+  progress: AdventureProgress;
+  onBack: () => void;
+  onComplete: (stars: number, score: number, accuracy: number) => void;
+}> = ({ world, levelIndex, progress, onBack, onComplete }) => {
+  const level: WorldLevel = world.levels[levelIndex];
+  const [runId, setRunId] = useState(0);
+  const [result, setResult] = useState<{
+    stars: number;
+    score: number;
+    total: number;
+    livesLost: number;
+    accuracy: number;
+  } | null>(null);
+
+  const prevResult = progress.levels[levelKey(world.id, levelIndex)];
+  const lives = level.config.lives ?? 0;
+
+  const finish = (score: number, total: number, livesLost: number) => {
+    const stars = computeStars(score, total, livesLost);
+    const accuracy = total > 0 ? score / total : 0;
+    onComplete(stars, score, accuracy);
+    setResult({ stars, score, total, livesLost, accuracy });
+  };
+
+  return (
+    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-stone-200 shadow-xs">
+      <div className="flex items-center justify-between mb-5">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-stone-800 transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Monde {world.id}
+        </button>
+        <h3 className="text-sm font-bold text-stone-900">
+          Niveau {levelIndex + 1} · {level.title}
+        </h3>
+        {/* Vies */}
+        <div className="flex items-center gap-0.5">
+          {lives > 0 ? (
+            Array.from({ length: lives }).map((_, i) => (
+              <Heart key={i} className={`w-4 h-4 ${result ? 'text-stone-200' : 'fill-rose-500 text-rose-500'}`} />
+            ))
+          ) : (
+            <span className="text-[10px] text-stone-400">sans vies</span>
+          )}
+        </div>
+      </div>
+
+      {result ? (
+        <LevelVictory
+          world={world}
+          result={result}
+          isBoss={level.game === 'boss'}
+          onReplay={() => {
+            setResult(null);
+            setRunId((r) => r + 1);
+          }}
+          onNext={() => {
+            setResult(null);
+            if (levelIndex + 1 < world.levels.length) {
+              // reste dans le même PlayLevel : on ne peut pas changer levelIndex ici,
+              // onBack ramène à la carte du monde où le niveau suivant est débloqué
+              onBack();
+            } else {
+              onBack();
+            }
+          }}
+          hasNext={levelIndex + 1 < world.levels.length}
+          prevStars={prevResult?.stars || 0}
+        />
+      ) : (
+        <LevelGame
+          key={runId}
+          world={world}
+          level={level}
+          onWin={(score, total, livesLost) => finish(score, total, livesLost)}
+          onLivesExhausted={(score, total) => finish(score, total, lives)}
+        />
+      )}
+    </div>
+  );
+};
+
+/* ═════════════════════ Écran de victoire ═════════════════════ */
+
+const LevelVictory: React.FC<{
+  world: World;
+  result: { stars: number; score: number; total: number; livesLost: number; accuracy: number };
+  isBoss: boolean;
+  hasNext: boolean;
+  prevStars: number;
+  onReplay: () => void;
+  onNext: () => void;
+}> = ({ world, result, isBoss, hasNext, prevStars, onReplay, onNext }) => {
+  const better = result.stars >= prevStars;
+  return (
+    <div className="text-center py-6 space-y-4">
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 16 }}
+        className={`w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br ${world.gradient} text-white flex items-center justify-center shadow-lg`}
+      >
+        {isBoss ? <Crown className="w-10 h-10" /> : <Trophy className="w-10 h-10" />}
+      </motion.div>
+
+      <h3 className="text-xl font-black text-stone-900">
+        {isBoss ? 'Le Grand Cycle est vaincu ! 👑' : 'Niveau terminé !'}
+      </h3>
+
+      {/* Étoiles animées */}
+      <div className="flex items-center justify-center gap-2">
+        {[1, 2, 3].map((s) => (
+          <motion.div
+            key={s}
+            initial={{ scale: 0, rotate: -30 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.25 + s * 0.2, type: 'spring', stiffness: 300, damping: 14 }}
+          >
+            <Star
+              className={`w-9 h-9 ${
+                s <= result.stars ? 'fill-amber-400 text-amber-400' : 'fill-stone-100 text-stone-200'
+              }`}
+            />
+          </motion.div>
+        ))}
+      </div>
+
+      <p className="text-sm text-stone-600">
+        Score : <strong>{result.score}/{result.total}</strong> · Précision :{' '}
+        <strong>{Math.round(result.accuracy * 100)} %</strong>
+        {!better && prevStars > 0 && (
+          <span className="block text-[11px] text-stone-400 mt-0.5">
+            Record précédent : {prevStars} ⭐
+          </span>
+        )}
+      </p>
+
+      {better && result.stars > prevStars && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="text-xs font-bold text-amber-600"
+        >
+          🎉 Nouveau record pour ce niveau ! +{result.stars * 30} XP
+        </motion.p>
+      )}
+
+      <div className="flex items-center justify-center gap-2 pt-2">
+        <button
+          onClick={onReplay}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-xl transition-colors cursor-pointer"
+        >
+          <RotateCcw className="w-4 h-4" />
+          Rejouer
+        </button>
+        <button
+          onClick={onNext}
+          className={`inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-colors cursor-pointer bg-gradient-to-r ${world.gradient} shadow-sm`}
+        >
+          {hasNext ? 'Niveau suivant' : isBoss ? 'Carte de l’aventure' : 'Retour au monde'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ═════════════════════ Router des mini-jeux ═════════════════════ */
+
+const LevelGame: React.FC<{
+  world: World;
+  level: WorldLevel;
+  onWin: (score: number, total: number, livesLost: number) => void;
+  onLivesExhausted: (score: number, total: number) => void;
+}> = ({ world, level, onWin, onLivesExhausted }) => {
+  const maxLives = level.config.lives ?? 0;
+  const [livesLost, setLivesLost] = useState(0);
+  const [score, setScore] = useState(0);
+  const [step, setStep] = useState(0);
+  const [total, setTotal] = useState(0);
+
+  // Vérifie l'échec après une erreur
+  const registerAnswer = (correct: boolean, questionsTotal: number) => {
+    const newScore = correct ? score + 1 : score;
+    const newLost = correct ? livesLost : livesLost + 1;
+    setScore(newScore);
+    setLivesLost(newLost);
+    if (maxLives > 0 && newLost > maxLives) {
+      onLivesExhausted(newScore, questionsTotal);
+    }
+    return { newScore, newLost };
+  };
+
+  const common = { world, level, registerAnswer, finish: () => onWin(score, total, livesLost) };
+  void step;
+  void total;
+  void setStep;
+  void setTotal;
+
+  switch (level.game) {
+    case 'quiz':
+    case 'boss': {
+      const bank = level.game === 'boss' ? QUIZ_BOSS : quizBankForWorld(world);
+      const n = level.config.questions ?? 4;
+      return (
+        <QuizRun
+          key={`${world.id}-${levelIndex(world, level)}-quiz`}
+          questions={shuffle(bank).slice(0, n)}
+          maxLives={maxLives}
+          onAnswer={(correct, totalSoFar) => {
+            const { newScore, newLost } = registerAnswer(correct, totalSoFar);
+            return { newScore, newLost };
+          }}
+          onEnd={(finalScore, finalTotal, lost) => onWin(finalScore, finalTotal, lost)}
+          onFail={(finalScore, finalTotal, lost) => onLivesExhausted(finalScore, finalTotal)}
+          accent={`bg-gradient-to-r ${world.gradient}`}
+          softBg={world.softBg}
+          accentText={world.accentText}
+        />
+      );
+    }
+    case 'truefalse':
+      return (
+        <TrueFalseRun
+          items={TRUE_FALSE_SETS[Math.min(world.id - 1, TRUE_FALSE_SETS.length - 1)]}
+          maxLives={maxLives}
+          onEnd={(finalScore, finalTotal, lost) => onWin(finalScore, finalTotal, lost)}
+          onFail={(finalScore, finalTotal) => onLivesExhausted(finalScore, finalTotal)}
+          softBg={world.softBg}
+          accentText={world.accentText}
+        />
+      );
+    case 'memory':
+      return (
+        <MemoryRun
+          deck={MEMORY_DECKS[level.config.deckIndex ?? 0]}
+          onEnd={(moves) => onWin(moves === 0 ? 1 : 1, 1, 0)}
+          softBg={world.softBg}
+          accentText={world.accentText}
+        />
+      );
+    case 'sort':
+      return (
+        <SortRun
+          items={shuffle(SYMPTOM_SORT_SETS[Math.min(world.id - 1, SYMPTOM_SORT_SETS.length - 1)])}
+          maxLives={maxLives}
+          onEnd={(finalScore, finalTotal, lost) => onWin(finalScore, finalTotal, lost)}
+          onFail={(finalScore, finalTotal) => onLivesExhausted(finalScore, finalTotal)}
+          softBg={world.softBg}
+          accentText={world.accentText}
+        />
+      );
+    default:
+      return null;
+  }
+};
+
+function levelIndex(_world: World, level: WorldLevel): string {
+  return level.title;
+}
+
+/* ═════════════════════ Quiz générique en run ═════════════════════ */
+
+const QuizRun: React.FC<{
+  questions: QuizQuestion[];
+  maxLives: number;
+  onAnswer?: (correct: boolean, totalSoFar: number) => void;
+  onEnd: (score: number, total: number, livesLost: number) => void;
+  onFail: (score: number, total: number, livesLost: number) => void;
+  accent: string;
+  softBg: string;
+  accentText: string;
+}> = ({ questions, maxLives, onEnd, onFail, accent }) => {
   const [step, setStep] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
   const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
+  const [livesLost, setLivesLost] = useState(0);
+  const [dead, setDead] = useState(false);
 
   const q = questions[step];
 
   const pick = (i: number) => {
     if (picked !== null) return;
     setPicked(i);
-    if (i === q.answerIndex) {
+    const correct = i === q.answerIndex;
+    if (correct) {
       setScore((s) => s + 1);
       hapticSuccess();
     } else {
+      setLivesLost((l) => l + 1);
       hapticLight();
+      if (maxLives > 0 && livesLost + 1 > maxLives) {
+        setDead(true);
+      }
     }
   };
 
   const next = () => {
+    if (dead) {
+      onFail(score, step + 1, livesLost);
+      return;
+    }
     if (step + 1 >= questions.length) {
-      const finalScore = score;
-      onScore(finalScore);
-      setDone(true);
+      onEnd(score, questions.length, livesLost);
     } else {
       setStep((s) => s + 1);
       setPicked(null);
     }
   };
 
-  const restart = () => {
-    setStep(0);
-    setPicked(null);
-    setScore(0);
-    setDone(false);
-  };
-
-  if (done) {
-    const perfect = score === questions.length;
+  if (dead) {
     return (
-      <GameShell onExit={onExit} title="Quiz « Mon cycle & moi »">
-        <div className="text-center py-8 space-y-4">
-          <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 18 }}
-            className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center ${
-              perfect ? 'bg-amber-50 text-amber-500' : 'bg-rose-50 text-rose-500'
-            }`}
-          >
-            <Trophy className="w-10 h-10" />
-          </motion.div>
-          <h3 className="text-xl font-black text-stone-900">
-            {score} / {questions.length} bonnes réponses
-          </h3>
-          <p className="text-sm text-stone-600 max-w-sm mx-auto leading-relaxed">
-            {perfect
-              ? 'Parfait ! Tu maîtrises ton cycle mieux que personne. 🏆'
-              : score >= 6
-                ? 'Très bien ! Tu connais bien ton corps, continue. ✨'
-                : 'Beau début — refais un tour dans les guides Conseils et retente ta chance !'}
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={restart}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Rejouer
-            </button>
-            <button
-              onClick={onExit}
-              className="px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-xl transition-colors cursor-pointer"
-            >
-              Retour aux jeux
-            </button>
-          </div>
-        </div>
-      </GameShell>
+      <div className="text-center py-8 space-y-4">
+        <motion.div
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="w-16 h-16 mx-auto rounded-full bg-stone-100 flex items-center justify-center"
+        >
+          <X className="w-8 h-8 text-stone-400" />
+        </motion.div>
+        <h3 className="text-lg font-black text-stone-900">Plus de vies !</h3>
+        <p className="text-sm text-stone-600">
+          Tu as répondu à {score}/{questions.length} correctement. Relis le guide dans l'onglet Conseils et retente !
+        </p>
+        <button
+          onClick={next}
+          className={`inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white rounded-xl ${accent}`}
+        >
+          Voir le résultat
+        </button>
+      </div>
     );
   }
 
   return (
-    <GameShell onExit={onExit} title="Quiz « Mon cycle & moi »">
+    <div>
       {/* Progression */}
       <div className="flex items-center gap-1.5 mb-4">
         {questions.map((_, i) => (
           <span
             key={i}
             className={`h-1.5 rounded-full transition-all ${
-              i < step ? 'w-6 bg-rose-400' : i === step ? 'w-8 bg-rose-500' : 'w-4 bg-stone-200'
+              i < step ? 'w-5 bg-rose-400' : i === step ? 'w-7 bg-rose-500' : 'w-3.5 bg-stone-200'
             }`}
           />
         ))}
-        <span className="ml-auto text-[11px] font-medium text-stone-400">
-          {step + 1}/{questions.length}
-        </span>
       </div>
 
       <AnimatePresence mode="wait">
@@ -479,7 +782,6 @@ const QuizGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }> =
           transition={{ duration: 0.25, ease: 'easeOut' }}
         >
           <h3 className="text-base font-bold text-stone-900 mb-4 leading-snug">{q.question}</h3>
-
           <div className="space-y-2">
             {q.choices.map((choice, i) => {
               const isAnswer = i === q.answerIndex;
@@ -524,111 +826,84 @@ const QuizGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }> =
                 </div>
                 <button
                   onClick={next}
-                  className="mt-4 w-full py-3 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors cursor-pointer"
+                  className={`mt-4 w-full py-3 text-sm font-semibold text-white rounded-xl transition-colors cursor-pointer ${accent}`}
                 >
-                  {step + 1 >= questions.length ? 'Voir mon score' : 'Question suivante'}
+                  {dead ? 'Voir le résultat' : step + 1 >= questions.length ? 'Terminer le niveau' : 'Suivant'}
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
       </AnimatePresence>
-    </GameShell>
+    </div>
   );
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   JEU 2 : VRAI / FAUX
-   ═══════════════════════════════════════════════════════════════ */
+/* ═════════════════════ Vrai / Faux en run ═════════════════════ */
 
-const TrueFalseGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }> = ({ onScore, onExit }) => {
-  const items = useMemo(() => shuffle(TRUE_FALSE), []);
+const TrueFalseRun: React.FC<{
+  items: TrueFalseItem[];
+  maxLives: number;
+  onEnd: (score: number, total: number, livesLost: number) => void;
+  onFail: (score: number, total: number) => void;
+  softBg: string;
+  accentText: string;
+}> = ({ items, maxLives, onEnd, onFail, accentText }) => {
   const [step, setStep] = useState(0);
   const [answered, setAnswered] = useState<null | boolean>(null);
   const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [bestStreak, setBestStreak] = useState(0);
-  const [done, setDone] = useState(false);
+  const [livesLost, setLivesLost] = useState(0);
+  const [dead, setDead] = useState(false);
 
   const item = items[step];
 
   const answer = (v: boolean) => {
     if (answered !== null) return;
     setAnswered(v);
-    if (v === item.answer) {
+    const correct = v === item.answer;
+    if (correct) {
       setScore((s) => s + 1);
-      setStreak((s) => {
-        const ns = s + 1;
-        setBestStreak((b) => Math.max(b, ns));
-        return ns;
-      });
       hapticSuccess();
     } else {
-      setStreak(0);
+      setLivesLost((l) => l + 1);
       hapticLight();
+      if (maxLives > 0 && livesLost + 1 > maxLives) setDead(true);
     }
   };
 
   const next = () => {
+    if (dead) {
+      onFail(score, step + 1);
+      return;
+    }
     if (step + 1 >= items.length) {
-      const finalBest = Math.max(bestStreak, streak);
-      onScore(finalBest);
-      setDone(true);
+      onEnd(score, items.length, livesLost);
     } else {
       setStep((s) => s + 1);
       setAnswered(null);
     }
   };
 
-  const restart = () => {
-    setStep(0);
-    setAnswered(null);
-    setScore(0);
-    setStreak(0);
-    setBestStreak(0);
-    setDone(false);
-  };
-
-  if (done) {
+  if (dead) {
     return (
-      <GameShell onExit={onExit} title="Vrai ou Faux">
-        <div className="text-center py-8 space-y-4">
-          <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 18 }}
-            className="w-20 h-20 mx-auto rounded-full bg-violet-50 text-violet-500 flex items-center justify-center"
-          >
-            <Trophy className="w-10 h-10" />
-          </motion.div>
-          <h3 className="text-xl font-black text-stone-900">
-            {score} / {items.length} idées reçues débusquées
-          </h3>
-          <p className="text-sm text-stone-600">
-            Meilleure série : <strong className="text-violet-700">{bestStreak} 🔥</strong>
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={restart}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Rejouer
-            </button>
-            <button
-              onClick={onExit}
-              className="px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-xl transition-colors cursor-pointer"
-            >
-              Retour aux jeux
-            </button>
-          </div>
+      <div className="text-center py-8 space-y-4">
+        <div className="w-16 h-16 mx-auto rounded-full bg-stone-100 flex items-center justify-center">
+          <X className="w-8 h-8 text-stone-400" />
         </div>
-      </GameShell>
+        <h3 className="text-lg font-black text-stone-900">Plus de vies !</h3>
+        <p className="text-sm text-stone-600">Score : {score}/{items.length}. Retente ta chance !</p>
+        <button
+          onClick={next}
+          className={`px-5 py-2.5 text-sm font-semibold text-white rounded-xl cursor-pointer bg-gradient-to-r from-violet-500 to-purple-500`}
+        >
+          Voir le résultat
+        </button>
+      </div>
     );
   }
 
   return (
-    <GameShell onExit={onExit} title="Vrai ou Faux">
+    <div>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1.5">
           {items.map((_, i) => (
@@ -640,15 +915,9 @@ const TrueFalseGame: React.FC<{ onScore: (v: number) => void; onExit: () => void
             />
           ))}
         </div>
-        {streak > 1 && (
-          <motion.span
-            initial={{ scale: 0.7 }}
-            animate={{ scale: 1 }}
-            className="text-[11px] font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full"
-          >
-            🔥 {streak} d'affilée
-          </motion.span>
-        )}
+        <span className={`text-[11px] font-bold ${accentText}`}>
+          {score}/{items.length}
+        </span>
       </div>
 
       <AnimatePresence mode="wait">
@@ -716,47 +985,41 @@ const TrueFalseGame: React.FC<{ onScore: (v: number) => void; onExit: () => void
                 </div>
                 <button
                   onClick={next}
-                  className="mt-4 w-full py-3 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-colors cursor-pointer"
+                  className="mt-4 w-full py-3 text-sm font-semibold text-white bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl cursor-pointer"
                 >
-                  {step + 1 >= items.length ? 'Voir mon score' : 'Affirmation suivante'}
+                  {dead ? 'Voir le résultat' : step + 1 >= items.length ? 'Terminer le niveau' : 'Suivant'}
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
       </AnimatePresence>
-    </GameShell>
+    </div>
   );
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   JEU 3 : MÉMOIRE DES ÉMOTIONS
-   ═══════════════════════════════════════════════════════════════ */
+/* ═════════════════════ Mémoire en run ═════════════════════ */
 
-interface MemoryCard {
-  key: number;
-  emoji: string;
-  label: string;
-  flipped: boolean;
-  matched: boolean;
-}
-
-const MemoryGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }> = ({ onScore, onExit }) => {
-  const [cards, setCards] = useState<MemoryCard[]>(() => {
-    const deck = MEMORY_PAIRS.flatMap((p, i) => [
+const MemoryRun: React.FC<{
+  deck: MemoryPair[];
+  onEnd: (moves: number) => void;
+  softBg: string;
+  accentText: string;
+}> = ({ deck, onEnd }) => {
+  const [cards, setCards] = useState(() => {
+    const full = deck.flatMap((p, i) => [
       { key: i * 2, emoji: p.emoji, label: p.label, flipped: false, matched: false },
       { key: i * 2 + 1, emoji: p.emoji, label: p.label, flipped: false, matched: false },
     ]);
-    return shuffle(deck);
+    return shuffle(full);
   });
   const [firstPick, setFirstPick] = useState<number | null>(null);
   const [moves, setMoves] = useState(0);
   const [locked, setLocked] = useState(false);
-  const [done, setDone] = useState(false);
   const [lastMatch, setLastMatch] = useState<string | null>(null);
 
   const flip = (key: number) => {
-    if (locked || done) return;
+    if (locked) return;
     const card = cards.find((c) => c.key === key);
     if (!card || card.flipped || card.matched) return;
     hapticLight();
@@ -774,8 +1037,7 @@ const MemoryGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }>
     setLocked(true);
 
     if (first.emoji === card.emoji) {
-      // Paire trouvée
-      const pair = MEMORY_PAIRS.find((p) => p.emoji === card.emoji);
+      const pair = deck.find((p) => p.emoji === card.emoji);
       setLastMatch(pair?.label || null);
       setTimeout(() => {
         setCards((cs) =>
@@ -784,14 +1046,6 @@ const MemoryGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }>
         setFirstPick(null);
         setLocked(false);
         hapticSuccess();
-        // Vérifie la fin
-        setCards((cs) => {
-          if (cs.every((c) => c.matched)) {
-            onScore(moves + 1);
-            setDone(true);
-          }
-          return cs;
-        });
       }, 450);
     } else {
       setTimeout(() => {
@@ -805,61 +1059,20 @@ const MemoryGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }>
     }
   };
 
-  const restart = () => {
-    const deck = MEMORY_PAIRS.flatMap((p, i) => [
-      { key: i * 2, emoji: p.emoji, label: p.label, flipped: false, matched: false },
-      { key: i * 2 + 1, emoji: p.emoji, label: p.label, flipped: false, matched: false },
-    ]);
-    setCards(shuffle(deck));
-    setFirstPick(null);
-    setMoves(0);
-    setLocked(false);
-    setDone(false);
-    setLastMatch(null);
-  };
+  // Fin de partie
+  const matchedCount = cards.filter((c) => c.matched).length;
+  const allMatched = matchedCount === cards.length;
+  React.useEffect(() => {
+    if (allMatched && cards.length > 0) {
+      const timer = setTimeout(() => onEnd(moves), 900);
+      return () => clearTimeout(timer);
+    }
+  }, [allMatched, cards.length, moves, onEnd]);
 
-  if (done) {
-    return (
-      <GameShell onExit={onExit} title="Mémoire des émotions">
-        <div className="text-center py-8 space-y-4">
-          <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 18 }}
-            className="w-20 h-20 mx-auto rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center"
-          >
-            <Trophy className="w-10 h-10" />
-          </motion.div>
-          <h3 className="text-xl font-black text-stone-900">Terminé en {moves} coups !</h3>
-          <p className="text-sm text-stone-600 max-w-sm mx-auto">
-            {moves <= 9
-              ? 'Mémoire de championne ! 🏆'
-              : moves <= 13
-                ? 'Très bien joué ! ✨'
-                : 'Chaque partie entraîne ta mémoire, retente !'}
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={restart}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Rejouer
-            </button>
-            <button
-              onClick={onExit}
-              className="px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-xl transition-colors cursor-pointer"
-            >
-              Retour aux jeux
-            </button>
-          </div>
-        </div>
-      </GameShell>
-    );
-  }
+  const gridCols = deck.length <= 3 ? 'grid-cols-3' : deck.length <= 4 ? 'grid-cols-4' : 'grid-cols-4';
 
   return (
-    <GameShell onExit={onExit} title="Mémoire des émotions">
+    <div>
       <div className="flex items-center justify-between mb-4 text-xs">
         <span className="font-medium text-stone-500">
           Coups : <strong className="text-stone-900">{moves}</strong>
@@ -867,7 +1080,7 @@ const MemoryGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }>
         <span className="font-medium text-stone-500">
           Paires :{' '}
           <strong className="text-stone-900">
-            {cards.filter((c) => c.matched).length / 2}/{MEMORY_PAIRS.length}
+            {matchedCount / 2}/{deck.length}
           </strong>
         </span>
       </div>
@@ -885,7 +1098,7 @@ const MemoryGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }>
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      <div className={`grid ${gridCols} gap-2 sm:gap-3`}>
         {cards.map((card) => (
           <motion.button
             key={card.key}
@@ -910,34 +1123,163 @@ const MemoryGame: React.FC<{ onScore: (v: number) => void; onExit: () => void }>
           </motion.button>
         ))}
       </div>
-
-      <p className="mt-4 text-[11px] text-stone-400 text-center">
-        Retrouve les 6 paires en un minimum de coups. Chaque paire révèle un petit message positif 💜
-      </p>
-    </GameShell>
+    </div>
   );
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   Coquille commune : en-tête avec retour
-   ═══════════════════════════════════════════════════════════════ */
+/* ═════════════════════ Tri de symptômes en run ═════════════════════ */
 
-const GameShell: React.FC<{ title: string; onExit: () => void; children: React.ReactNode }> = ({
-  title,
-  onExit,
-  children,
-}) => (
-  <div className="bg-white p-5 sm:p-6 rounded-2xl border border-stone-200 shadow-xs">
-    <div className="flex items-center justify-between mb-5">
-      <button
-        onClick={onExit}
-        className="inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-stone-800 transition-colors cursor-pointer"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Tous les jeux
-      </button>
-      <h3 className="text-sm font-bold text-stone-900">{title}</h3>
+const SortRun: React.FC<{
+  items: SymptomSortItem[];
+  maxLives: number;
+  onEnd: (score: number, total: number, livesLost: number) => void;
+  onFail: (score: number, total: number) => void;
+  softBg: string;
+  accentText: string;
+}> = ({ items, maxLives, onEnd, onFail }) => {
+  const [step, setStep] = useState(0);
+  const [answer, setAnswer] = useState<null | 'body' | 'mind'>(null);
+  const [score, setScore] = useState(0);
+  const [livesLost, setLivesLost] = useState(0);
+  const [dead, setDead] = useState(false);
+
+  const item = items[step];
+
+  const choose = (cat: 'body' | 'mind') => {
+    if (answer !== null) return;
+    setAnswer(cat);
+    const correct = cat === item.category;
+    if (correct) {
+      setScore((s) => s + 1);
+      hapticSuccess();
+    } else {
+      setLivesLost((l) => l + 1);
+      hapticLight();
+      if (maxLives > 0 && livesLost + 1 > maxLives) setDead(true);
+    }
+  };
+
+  const next = () => {
+    if (dead) {
+      onFail(score, step + 1);
+      return;
+    }
+    if (step + 1 >= items.length) {
+      onEnd(score, items.length, livesLost);
+    } else {
+      setStep((s) => s + 1);
+      setAnswer(null);
+    }
+  };
+
+  if (dead) {
+    return (
+      <div className="text-center py-8 space-y-4">
+        <div className="w-16 h-16 mx-auto rounded-full bg-stone-100 flex items-center justify-center">
+          <X className="w-8 h-8 text-stone-400" />
+        </div>
+        <h3 className="text-lg font-black text-stone-900">Plus de vies !</h3>
+        <p className="text-sm text-stone-600">Score : {score}/{items.length}. Retente !</p>
+        <button
+          onClick={next}
+          className="px-5 py-2.5 text-sm font-semibold text-white rounded-xl cursor-pointer bg-gradient-to-r from-rose-500 to-pink-500"
+        >
+          Voir le résultat
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-1.5">
+          {items.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 rounded-full transition-all ${
+                i < step ? 'w-5 bg-rose-400' : i === step ? 'w-7 bg-rose-500' : 'w-3.5 bg-stone-200'
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-[11px] font-bold text-rose-600">
+          {score}/{items.length}
+        </span>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -14 }}
+          transition={{ duration: 0.22 }}
+        >
+          <div className="bg-rose-50/60 border border-rose-100 rounded-2xl p-6 sm:p-8 mb-4 text-center">
+            <p className="text-xs text-stone-500 uppercase tracking-wider font-bold mb-2">
+              Ce symptôme est-il…
+            </p>
+            <p className="text-lg sm:text-xl font-black text-stone-900">{item.label}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <motion.button
+              onClick={() => choose('body')}
+              whileTap={answer === null ? { scale: 0.96 } : undefined}
+              className={`py-4 rounded-2xl text-sm font-bold border-2 transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                answer === null
+                  ? 'bg-sky-50 border-sky-200 text-sky-800 hover:bg-sky-100'
+                  : item.category === 'body'
+                    ? 'bg-sky-500 border-sky-500 text-white shadow-md'
+                    : 'bg-white border-stone-100 text-stone-300'
+              }`}
+            >
+              <Heart className="w-5 h-5" />
+              Corporel
+            </motion.button>
+            <motion.button
+              onClick={() => choose('mind')}
+              whileTap={answer === null ? { scale: 0.96 } : undefined}
+              className={`py-4 rounded-2xl text-sm font-bold border-2 transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                answer === null
+                  ? 'bg-violet-50 border-violet-200 text-violet-800 hover:bg-violet-100'
+                  : item.category === 'mind'
+                    ? 'bg-violet-500 border-violet-500 text-white shadow-md'
+                    : 'bg-white border-stone-100 text-stone-300'
+              }`}
+            >
+              <Brain className="w-5 h-5" />
+              Émotionnel
+            </motion.button>
+          </div>
+
+          <AnimatePresence>
+            {answer !== null && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                transition={{ duration: 0.25 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-4 p-3.5 rounded-xl bg-stone-50 border border-stone-100 text-xs text-stone-700 flex items-start gap-2">
+                  <Info className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{item.hint}</span>
+                </div>
+                <button
+                  onClick={next}
+                  className="mt-4 w-full py-3 text-sm font-semibold text-white bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl cursor-pointer"
+                >
+                  {dead ? 'Voir le résultat' : step + 1 >= items.length ? 'Terminer le niveau' : 'Suivant'}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </AnimatePresence>
     </div>
-    {children}
-  </div>
-);
+  );
+};
+
+/* Icônes utilisées uniquement dans le header du jeu de tri */
+void Flame;

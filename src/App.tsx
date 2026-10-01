@@ -18,6 +18,7 @@ import { TutorialView } from './components/TutorialView';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { LockScreen } from './components/LockScreen';
 import { InsightsView } from './components/InsightsView';
+import { GamesView } from './components/GamesView';
 import { Cycle, DailyLog, UserSettings, CalculatedCycleStatus, CycleStatistics } from './types';
 import { maybeNotifyOnOpen } from './services/reminders';
 import { isPinEnabled, isSessionUnlocked, markSessionUnlocked, verifyPin } from './utils/pin';
@@ -383,6 +384,8 @@ export default function App() {
             settings={settings}
           />
         )}
+
+        {currentTab === 'games' && <GamesView />}
         </motion.div>
         </AnimatePresence>
       </main>

@@ -1,7 +1,7 @@
 import React from 'react';
-import { PlusCircle, Calendar as CalendarIcon, ShieldCheck, HeartPulse, Smartphone, TrendingUp } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, ShieldCheck, HeartPulse, Smartphone, TrendingUp, Gamepad2 } from 'lucide-react';
 
-export type NavTab = 'dashboard' | 'calendar' | 'calculator' | 'advice' | 'history' | 'privacy' | 'insights';
+export type NavTab = 'dashboard' | 'calendar' | 'calculator' | 'advice' | 'history' | 'privacy' | 'insights' | 'games';
 
 interface HeaderProps {
   currentTab: NavTab;
@@ -66,6 +66,17 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
             <span>Conseils</span>
+          </button>
+          <button
+            onClick={() => onSelectTab('games')}
+            className={`px-3 py-2 rounded-lg transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+              currentTab === 'games'
+                ? 'text-purple-900 bg-purple-50 font-semibold'
+                : 'hover:text-stone-900 hover:bg-stone-50'
+            }`}
+          >
+            <Gamepad2 className="w-3.5 h-3.5 text-purple-500" />
+            <span>Jeux</span>
           </button>
           <button
             onClick={() => onSelectTab('insights')}

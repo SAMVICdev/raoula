@@ -11,7 +11,8 @@ import {
   Clock, 
   HeartPulse, 
   AlertCircle,
-  Moon as MoonIcon
+  Moon as MoonIcon,
+  CalendarCog
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { CalculatedCycleStatus, DailyLog } from '../types';
@@ -27,6 +28,7 @@ interface DashboardViewProps {
   onOpenAddCycle: () => void;
   onNavigateToTab: (tab: 'calendar' | 'calculator' | 'advice' | 'history' | 'privacy') => void;
   onStartPeriodToday: () => void;
+  onOpenUpdateLastPeriod: () => void;
   onOpenInstallModal: () => void;
 }
 
@@ -38,6 +40,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenAddCycle,
   onNavigateToTab,
   onStartPeriodToday,
+  onOpenUpdateLastPeriod,
   onOpenInstallModal,
 }) => {
   const todayStr = formatDate(new Date());
@@ -164,6 +167,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
       )}
+
+      {/* Correction de la date des dernières règles */}
+      <motion.div variants={fadeUpItem} className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-xs flex items-center justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 shrink-0">
+            <CalendarCog className="w-4.5 h-4.5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-stone-900">
+              Date des dernières règles
+            </h3>
+            <p className="text-xs text-stone-500 mt-0.5">
+              Trompée de date, ou envie de la corriger ? Tout se recalcule automatiquement.
+            </p>
+          </div>
+        </div>
+        <motion.button
+          onClick={onOpenUpdateLastPeriod}
+          whileTap={{ scale: 0.96 }}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
+        >
+          <CalendarCog className="w-3.5 h-3.5" />
+          <span>Modifier</span>
+        </motion.button>
+      </motion.div>
 
       {/* Mobile-First 4-Key Live Counters */}
       <motion.div variants={fadeUpItem} className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">

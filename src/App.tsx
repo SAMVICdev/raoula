@@ -11,6 +11,7 @@ import { HistoryView } from './components/HistoryView';
 import { PrivacySettingsView } from './components/PrivacySettingsView';
 import { DailyLogModal } from './components/DailyLogModal';
 import { AddCycleModal } from './components/AddCycleModal';
+import { UpdateLastPeriodModal } from './components/UpdateLastPeriodModal';
 import { PWAInstallModal } from './components/PWAInstallModal';
 import { OnboardingView } from './components/OnboardingView';
 import { TutorialView } from './components/TutorialView';
@@ -58,6 +59,7 @@ export default function App() {
   const [isDailyLogOpen, setIsDailyLogOpen] = useState(false);
   const [selectedDateForLog, setSelectedDateForLog] = useState<string>(formatDate(new Date()));
   const [isAddCycleOpen, setIsAddCycleOpen] = useState(false);
+  const [isUpdateLastPeriodOpen, setIsUpdateLastPeriodOpen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
 
   // Installation automatique : fenêtre proposée au premier chargement si possible,
@@ -158,6 +160,13 @@ export default function App() {
   // Handlers for Cycles
   const handleSaveCycle = async (newCycle: Cycle) => {
     await saveCycle(newCycle);
+    const updated = await getAllCycles();
+    setCycles(updated);
+  };
+
+  // Mise à jour du cycle en cours (ressaisie de la date des dernières règles)
+  const handleUpdateLastPeriod = async (updatedCycle: Cycle) => {
+    await saveCycle(updatedCycle);
     const updated = await getAllCycles();
     setCycles(updated);
   };
@@ -305,6 +314,7 @@ export default function App() {
             onOpenAddCycle={() => setIsAddCycleOpen(true)}
             onNavigateToTab={(tab) => setCurrentTab(tab)}
             onStartPeriodToday={handleStartPeriodToday}
+            onOpenUpdateLastPeriod={() => setIsUpdateLastPeriodOpen(true)}
             onOpenInstallModal={() => setIsInstallModalOpen(true)}
           />
         )}
@@ -434,6 +444,14 @@ export default function App() {
         onClose={() => setIsAddCycleOpen(false)}
         onSaveCycle={handleSaveCycle}
         defaultPeriodDays={settings.defaultPeriodDuration || 5}
+      />
+
+      <UpdateLastPeriodModal
+        isOpen={isUpdateLastPeriodOpen}
+        onClose={() => setIsUpdateLastPeriodOpen(false)}
+        lastCycle={cycleStatus.lastCycle || null}
+        defaultPeriodDays={settings.defaultPeriodDuration || 5}
+        onUpdateCycle={handleUpdateLastPeriod}
       />
 
       <PWAInstallModal

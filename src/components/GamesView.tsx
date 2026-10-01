@@ -21,6 +21,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { staggerContainer, fadeUpItem, hapticLight, hapticSuccess } from '../utils/animation';
+import { AdventureDiploma } from './AdventureDiploma';
 import {
   WORLDS,
   TOTAL_LEVELS,
@@ -75,9 +76,10 @@ type Route =
   | { view: 'world'; world: World }
   | { view: 'play'; world: World; levelIndex: number };
 
-export const GamesView: React.FC = () => {
+export const GamesView: React.FC<{ userName?: string }> = ({ userName }) => {
   const [route, setRoute] = useState<Route>({ view: 'map' });
   const [progress, setProgress] = useState<AdventureProgress>(() => loadProgress());
+  const [showCeremony, setShowCeremony] = useState(false);
 
   const completeLevel = (
     worldId: number,
@@ -107,6 +109,27 @@ export const GamesView: React.FC = () => {
   const stars = totalStars(progress);
   const completedLevels = Object.keys(progress.levels).length;
   const adventureDone = completedLevels >= TOTAL_LEVELS;
+
+  // Cérémonie automatique : s'affiche une fois quand le dernier niveau est validé
+  React.useEffect(() => {
+    if (adventureDone && !showCeremony) {
+      const dismissed = (() => {
+        try {
+          return localStorage.getItem('raoula_ceremony_seen') === '1';
+        } catch {
+          return false;
+        }
+      })();
+      if (!dismissed) {
+        setShowCeremony(true);
+        try {
+          localStorage.setItem('raoula_ceremony_seen', '1');
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }, [adventureDone, showCeremony]);
 
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-5">
@@ -138,6 +161,15 @@ export const GamesView: React.FC = () => {
                   ? 'Tu as vaincu le Grand Cycle. Rejoue pour améliorer tes étoiles !'
                   : '5 mondes, 20 niveaux et un boss final pour devenir experte de ton corps.'}
               </p>
+              {adventureDone && (
+                <button
+                  onClick={() => setShowCeremony(true)}
+                  className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-amber-900 bg-gradient-to-r from-amber-300 to-yellow-400 hover:from-amber-200 hover:to-yellow-300 rounded-xl shadow-sm transition-all cursor-pointer"
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  Voir mon diplôme de Gardienne du Cycle
+                </button>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3 text-white shrink-0">
@@ -305,6 +337,19 @@ export const GamesView: React.FC = () => {
               }
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Cérémonie de fin : diplôme imprimable */}
+      <AnimatePresence>
+        {showCeremony && (
+          <AdventureDiploma
+            userName={userName}
+            stars={stars}
+            maxStars={TOTAL_LEVELS * 3}
+            xp={progress.xp}
+            onClose={() => setShowCeremony(false)}
+          />
         )}
       </AnimatePresence>
     </motion.div>

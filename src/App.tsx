@@ -385,7 +385,7 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'games' && <GamesView />}
+        {currentTab === 'games' && <GamesView userName={settings.userName} />}
         </motion.div>
         </AnimatePresence>
       </main>

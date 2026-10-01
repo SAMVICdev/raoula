@@ -87,3 +87,42 @@ body {
   --color-red-200: #991b1b;
   --color-red-600: #f87171;    /* red-400 */
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   IMPRESSION DU DIPLÔME « Gardienne du Cycle » — cérémonie de fin d'aventure.
+   À l'impression : seul le diplôme reste, en plein cadre, sans interface.
+   ───────────────────────────────────────────────────────────────────────── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .ceremony-screen,
+  .ceremony-screen * {
+    visibility: visible;
+  }
+  .ceremony-screen {
+    position: absolute;
+    inset: 0;
+    background: white !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+  .diploma-sheet {
+    box-shadow: none !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    border-color: #fbbf24 !important;
+    border-width: 4px !important;
+    border-style: double !important;
+  }
+  .diploma-sheet * {
+    color: inherit !important;
+  }
+  /* Le dégradé du titre n'imprime pas : on force une couleur pleine */
+  .diploma-sheet .print-solid-amber {
+    color: #d97706 !important;
+    -webkit-text-fill-color: #d97706 !important;
+  }
+}
